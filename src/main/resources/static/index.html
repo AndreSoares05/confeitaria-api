@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confeitaria - Painel</title>
+<style>
+  body{font-family:Arial,sans-serif;background:#fff7f0;margin:0;color:#3b2a20}
+  header{background:#c2185b;color:#fff;padding:14px 24px}
+  header a{color:#ffe0ef;margin-left:16px;font-size:14px}
+  main{max-width:1000px;margin:20px auto;padding:0 16px}
+  section{background:#fff;border-radius:8px;padding:16px;margin-bottom:20px;box-shadow:0 1px 4px #0002}
+  h2{margin-top:0;color:#c2185b}
+  form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  input,select,button{padding:7px;border:1px solid #ccc;border-radius:5px;font-size:14px}
+  button{background:#c2185b;color:#fff;border:none;cursor:pointer}
+  button.sec{background:#777}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border-bottom:1px solid #eee;padding:6px;text-align:left}
+  #msg{position:sticky;top:0;padding:10px;border-radius:6px;margin-bottom:12px;display:none}
+  .ok{background:#d4edda;color:#155724}.erro{background:#f8d7da;color:#721c24}
+</style>
+</head>
+<body>
+<header><b>🎂 Confeitaria</b>
+  <a href="/swagger-ui.html" target="_blank">Swagger</a></header>
+<main>
+<div id="msg"></div>
+
+<section>
+  <h2>Clientes</h2>
+  <form id="fCliente">
+    <input name="nome" placeholder="Nome" required>
+    <input name="email" placeholder="E-mail" required>
+    <input name="telefone" placeholder="Telefone (só números)">
+    <button>Cadastrar</button>
+  </form>
+  <table><thead><tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Telefone</th><th></th></tr></thead>
+  <tbody id="tClientes"></tbody></table>
+</section>
+
+<section>
+  <h2>Bolos</h2>
+  <form id="fBolo">
+    <input name="nome" placeholder="Nome" required>
+    <input name="sabor" placeholder="Sabor" required>
+    <input name="descricao" placeholder="Descrição">
+    <input name="preco" type="number" step="0.01" placeholder="Preço" required>
+    <input name="estoque" type="number" placeholder="Estoque" required>
+    <button>Cadastrar</button>
+  </form>
+  <form id="fFiltroBolo">
+    <input name="nome" placeholder="Filtrar por nome">
+    <input name="sabor" placeholder="Filtrar por sabor">
+    <select name="ativo"><option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option></select>
+    <button class="sec">Filtrar</button>
+  </form>
+  <table><thead><tr><th>ID</th><th>Nome</th><th>Sabor</th><th>Preço</th><th>Estoque</th><th>Ativo</th><th></th></tr></thead>
+  <tbody id="tBolos"></tbody></table>
+</section>
+
+<section>
+  <h2>Pedidos</h2>
+  <form id="fPedido">
+    <select name="clienteId" id="selCliente" required></select>
+    <select name="boloId" id="selBolo" required></select>
+    <input name="quantidade" type="number" min="1" placeholder="Qtd" required>
+    <input name="dataEntrega" type="date" required>
+    <button>Fazer pedido</button>
+  </form>
+  <form id="fFiltroPedido">
+    <select name="status"><option value="">Todos os status</option>
+      <option>PENDENTE</option><option>CONFIRMADO</option><option>EM_PRODUCAO</option><option>ENTREGUE</option><option>CANCELADO</option></select>
+    <button class="sec">Filtrar</button>
+  </form>
+  <table><thead><tr><th>ID</th><th>Cliente</th><th>Bolo</th><th>Qtd</th><th>Desc.</th><th>Total</th><th>Entrega</th><th>Status</th><th>Ações</th></tr></thead>
+  <tbody id="tPedidos"></tbody></table>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const brl = v => Number(v).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+function aviso(texto, ok) {
+  const m = $('msg'); m.textContent = texto; m.className = ok ? 'ok' : 'erro'; m.style.display = 'block';
+  setTimeout(() => m.style.display = 'none', 6000);
+}
+
+async function api(url, opts = {}) {
+  const r = await fetch(url, { headers: {'Content-Type': 'application/json'}, ...opts });
+  if (r.status === 204) return null;
+  const dados = await r.json().catch(() => null);
+  if (!r.ok) {
+    let t = (dados && dados.mensagem) || 'Erro ' + r.status;
+    if (dados && dados.campos) t += ' ' + Object.values(dados.campos).join('; ');
+    throw new Error(t);
+  }
+  return dados;
+}
+
+async function acao(fn, msgOk) {
+  try { await fn(); if (msgOk) aviso(msgOk, true); } catch (e) { aviso(e.message, false); }
+  carregarTudo();
+}
+
+const formJson = f => Object.fromEntries(new FormData(f).entries());
+
+async function carregarClientes() {
+  const lista = await api('/clientes');
+  $('tClientes').innerHTML = lista.map(c => `<tr><td>${c.id}</td><td>${esc(c.nome)}</td><td>${esc(c.email)}</td><td>${esc(c.telefone)}</td>
+    <td><button class="sec" onclick="excluir('/clientes/${c.id}')">Excluir</button></td></tr>`).join('');
+  $('selCliente').innerHTML = '<option value="">Cliente...</option>' + lista.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+}
+
+async function carregarBolos() {
+  const q = new URLSearchParams(Object.entries(formJson($('fFiltroBolo'))).filter(([k, v]) => v)).toString();
+  const lista = await api('/bolos' + (q ? '?' + q : ''));
+  $('tBolos').innerHTML = lista.map(b => `<tr><td>${b.id}</td><td>${esc(b.nome)}</td><td>${esc(b.sabor)}</td><td>${brl(b.preco)}</td><td>${b.estoque}</td><td>${b.ativo ? 'Sim' : 'Não'}</td>
+    <td><button class="sec" onclick="excluir('/bolos/${b.id}')">Excluir</button></td></tr>`).join('');
+  const todos = await api('/bolos?ativo=true');
+  $('selBolo').innerHTML = '<option value="">Bolo...</option>' + todos.map(b => `<option value="${b.id}">${esc(b.nome)} (${b.estoque} un.)</option>`).join('');
+}
+
+async function carregarPedidos() {
+  const q = new URLSearchParams(Object.entries(formJson($('fFiltroPedido'))).filter(([k, v]) => v)).toString();
+  const lista = await api('/pedidos' + (q ? '?' + q : ''));
+  $('tPedidos').innerHTML = lista.map(p => `<tr><td>${p.id}</td><td>${esc(p.clienteNome)}</td><td>${esc(p.boloNome)}</td><td>${p.quantidade}</td>
+    <td>${p.descontoPercentual}%</td><td>${brl(p.valorTotal)}</td><td>${p.dataEntrega}</td><td>${p.status}</td>
+    <td><button onclick="patch('/pedidos/${p.id}/avancar')">Avançar</button>
+        <button class="sec" onclick="patch('/pedidos/${p.id}/cancelar')">Cancelar</button>
+        <button class="sec" onclick="excluir('/pedidos/${p.id}')">Excluir</button></td></tr>`).join('');
+}
+
+function carregarTudo() { carregarClientes().then(carregarBolos).then(carregarPedidos).catch(e => aviso(e.message, false)); }
+const patch = url => acao(() => api(url, {method: 'PATCH'}), 'Pedido atualizado.');
+const excluir = url => { if (confirm('Confirma a exclusão?')) acao(() => api(url, {method: 'DELETE'}), 'Excluído com sucesso.'); };
+
+$('fCliente').onsubmit = e => { e.preventDefault(); const f = e.target;
+  acao(() => api('/clientes', {method: 'POST', body: JSON.stringify(formJson(f))}).then(() => f.reset()), 'Cliente cadastrado.'); };
+$('fBolo').onsubmit = e => { e.preventDefault(); const f = e.target; const d = formJson(f);
+  d.preco = Number(d.preco); d.estoque = Number(d.estoque);
+  acao(() => api('/bolos', {method: 'POST', body: JSON.stringify(d)}).then(() => f.reset()), 'Bolo cadastrado.'); };
+$('fPedido').onsubmit = e => { e.preventDefault(); const f = e.target; const d = formJson(f);
+  d.clienteId = Number(d.clienteId); d.boloId = Number(d.boloId); d.quantidade = Number(d.quantidade);
+  acao(() => api('/pedidos', {method: 'POST', body: JSON.stringify(d)}).then(() => f.reset()), 'Pedido criado.'); };
+$('fFiltroBolo').onsubmit = e => { e.preventDefault(); carregarBolos(); };
+$('fFiltroPedido').onsubmit = e => { e.preventDefault(); carregarPedidos(); };
+
+carregarTudo();
+</script>
+</body>
+</html>
