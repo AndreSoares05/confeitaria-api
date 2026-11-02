@@ -28,7 +28,7 @@ public class ClienteService {
         cliente.setNome(req.nome());
         cliente.setEmail(req.email().trim().toLowerCase());
         cliente.setTelefone(req.telefone());
-        // Regra: e-mail único
+        
         if (clienteRepository.existsByEmailIgnoreCase(cliente.getEmail())) {
             throw new ConflitoException("Já existe um cliente cadastrado com o e-mail " + cliente.getEmail());
         }
@@ -71,7 +71,7 @@ public class ClienteService {
     @Transactional
     public void excluir(Long id) {
         Cliente cliente = buscarPorId(id);
-        // Regra: não excluir cliente que possui pedidos
+       
         if (pedidoRepository.existsByClienteId(id)) {
             throw new ConflitoException("Não é possível excluir: o cliente possui pedidos cadastrados.");
         }
