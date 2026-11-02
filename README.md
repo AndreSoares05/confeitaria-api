@@ -181,17 +181,18 @@ Resposta (6 unidades → 5% de desconto):
 ```
 src/main/java/com/unifsa/confeitaria
 ├── ConfeitariaApplication.java
-├── config/        -> configuração do Swagger
-├── controller/    -> endpoints REST
-├── dto/           -> objetos de entrada e saída (Request/Response) de clientes, bolos e pedidos
-├── entity/        -> entidades JPA e enum de status
-├── exception/     -> exceções e tratamento global de erros
-├── repository/    -> acesso ao banco (Spring Data JPA)
-└── service/       -> regras de negócio
+├── config/       
+├── controller/    
+├── dto/           
+├── entity/        
+├── exception/    
+├── repository/    
+└── service/       
 src/main/resources
 ├── application.properties
-└── static/index.html   -> tela web
+└── static/index.html   
 ```
+## Link do video : (https://youtu.be/VB6Ly8uVxFA)
 
 ## Autor
 **Marcos Andre Soares** — Curso de Engenharia de Software
