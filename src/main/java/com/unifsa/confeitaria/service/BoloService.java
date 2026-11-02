@@ -32,7 +32,7 @@ public class BoloService {
         bolo.setPreco(req.preco());
         bolo.setEstoque(req.estoque());
         bolo.setAtivo(req.ativo() == null ? true : req.ativo());
-        // Regra: nome único
+        
         if (boloRepository.existsByNomeIgnoreCase(bolo.getNome().trim())) {
             throw new ConflitoException("Já existe um bolo com o nome '" + bolo.getNome() + "'.");
         }
@@ -88,7 +88,7 @@ public class BoloService {
     @Transactional
     public void excluir(Long id) {
         Bolo bolo = buscarPorId(id);
-        // Regra: não excluir bolo que já foi pedido (use "ativo = false" para tirar do cardápio)
+        
         if (pedidoRepository.existsByBoloId(id)) {
             throw new ConflitoException(
                     "Não é possível excluir: o bolo possui pedidos. Inative-o (ativo = false) para tirá-lo do cardápio.");
