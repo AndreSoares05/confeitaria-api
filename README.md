@@ -194,4 +194,4 @@ src/main/resources
 ```
 
 ## Autor
-**Marcos Andre Soares** — Curso de Engenharia de Software, UNIFSA
+**Marcos Andre Soares** — Curso de Engenharia de Software
