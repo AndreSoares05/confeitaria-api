@@ -22,9 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PedidoService {
 
-    /** Antecedência mínima (em dias) entre o pedido e a entrega. */
+   
     private static final int PRAZO_MINIMO_DIAS = 2;
-    /** Máximo de pedidos PENDENTES por cliente. */
+  
     private static final int MAX_PENDENTES_POR_CLIENTE = 3;
 
     private final PedidoRepository pedidoRepository;
@@ -42,29 +42,29 @@ public class PedidoService {
         Cliente cliente = clienteService.buscarPorId(req.clienteId());
         Bolo bolo = boloService.buscarPorId(req.boloId());
 
-        // Regra 1: bolo precisa estar ativo no cardápio
+        
         if (!Boolean.TRUE.equals(bolo.getAtivo())) {
             throw new RegraNegocioException("O bolo '" + bolo.getNome() + "' está inativo e não pode ser pedido.");
         }
-        // Regra 2: prazo mínimo de entrega
+       
         validarDataEntrega(req.dataEntrega());
-        // Regra 3: limite de pedidos pendentes por cliente
+      
         long pendentes = pedidoRepository.countByClienteIdAndStatus(cliente.getId(), StatusPedido.PENDENTE);
         if (pendentes >= MAX_PENDENTES_POR_CLIENTE) {
             throw new RegraNegocioException("O cliente já possui " + MAX_PENDENTES_POR_CLIENTE
                     + " pedidos pendentes. Conclua ou cancele algum antes de fazer outro.");
         }
-        // Regra 4: estoque suficiente (e baixa do estoque)
+       
         reservarEstoque(bolo, req.quantidade());
 
         Pedido pedido = new Pedido();
         pedido.setCliente(cliente);
         pedido.setBolo(bolo);
         pedido.setQuantidade(req.quantidade());
-        pedido.setPrecoUnitario(bolo.getPreco()); // guarda o preço da época do pedido
+        pedido.setPrecoUnitario(bolo.getPreco()); 
         pedido.setDataEntrega(req.dataEntrega());
         pedido.setStatus(StatusPedido.PENDENTE);
-        // Regra 5: desconto por quantidade
+       
         calcularValores(pedido);
 
         return PedidoResponse.de(pedidoRepository.save(pedido));
@@ -100,16 +100,15 @@ public class PedidoService {
     @Transactional
     public PedidoResponse atualizar(Long id, PedidoUpdateRequest req) {
         Pedido pedido = buscarEntidade(id);
-        // Regra 6: só dá para editar enquanto estiver PENDENTE
+        
         if (pedido.getStatus() != StatusPedido.PENDENTE) {
             throw new RegraNegocioException("Só é possível editar pedidos PENDENTES. Status atual: " + pedido.getStatus());
         }
         validarDataEntrega(req.dataEntrega());
 
         Bolo bolo = pedido.getBolo();
-        bolo.setEstoque(bolo.getEstoque() + pedido.getQuantidade()); // devolve a quantidade antiga
-        reservarEstoque(bolo, req.quantidade());                      // reserva a nova (falha => rollback)
-
+        bolo.setEstoque(bolo.getEstoque() + pedido.getQuantidade()); 
+        reservarEstoque(bolo, req.quantidade());                      
         pedido.setQuantidade(req.quantidade());
         pedido.setDataEntrega(req.dataEntrega());
         calcularValores(pedido);
@@ -126,7 +125,7 @@ public class PedidoService {
     @Transactional
     public PedidoResponse cancelar(Long id) {
         Pedido pedido = buscarEntidade(id);
-        // Regra 7: só cancela PENDENTE ou CONFIRMADO; estoque volta para o bolo
+        
         if (!pedido.getStatus().podeCancelar()) {
             throw new RegraNegocioException("Pedido com status " + pedido.getStatus() + " não pode ser cancelado.");
         }
@@ -139,14 +138,14 @@ public class PedidoService {
     @Transactional
     public void excluir(Long id) {
         Pedido pedido = buscarEntidade(id);
-        // Regra 8: só exclui pedido CANCELADO (histórico de vendas é preservado)
+       
         if (pedido.getStatus() != StatusPedido.CANCELADO) {
             throw new RegraNegocioException("Só é possível excluir pedidos CANCELADOS. Cancele o pedido primeiro.");
         }
         pedidoRepository.delete(pedido);
     }
 
-    // ---------- métodos auxiliares ----------
+
 
     private Pedido buscarEntidade(Long id) {
         return pedidoRepository.findById(id)
